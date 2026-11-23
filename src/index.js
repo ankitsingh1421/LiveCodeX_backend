@@ -3,6 +3,7 @@ const cors =  require('cors');
 const http = require('http');
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const Y = require('yjs');
 const app = express();
 const httpServer = new http.Server(app);
 const axios = require("axios");
@@ -33,6 +34,7 @@ const PORT = process.env.PORT;
 
 var rooms = []
 var removeRooms = []
+const roomDocuments = new Map()
 
 const io = require("socket.io")(httpServer, {
   cors: {
@@ -46,10 +48,15 @@ function removingRooms() {
   console.log("ROOMS: " + rooms)
   if (removeRooms.length != 0) {
       for (let i = 0; i < removeRooms.length; i++) {
-          if (io.sockets.adapter.rooms[removeRooms[i]] === undefined) {
+          if (!io.sockets.adapter.rooms.has(removeRooms[i])) {
               rooms = rooms.filter(function (item) {
                   return item !== removeRooms[i]
               })
+              const roomDocument = roomDocuments.get(removeRooms[i])
+              if (roomDocument) {
+                  roomDocument.document.destroy()
+                  roomDocuments.delete(removeRooms[i])
+              }
           }
       }
   }
@@ -79,7 +86,20 @@ io.on("connection", socket => {
   // If code changes, broadcast to sockets
   socket.on('code-change', msg => {
       socket.broadcast.to(socket.room).emit('code-update', msg)
+  })
 
+  socket.on('document-update', update => {
+      const roomDocument = roomDocuments.get(socket.room)
+      if (!roomDocument || !(update instanceof Uint8Array)) {
+          return
+      }
+
+      try {
+          Y.applyUpdate(roomDocument.document, update)
+          socket.broadcast.to(socket.room).emit('document-update', update)
+      } catch (error) {
+          console.error('Rejected invalid collaborative editor update:', error.message)
+      }
   })
 
   // Send initial data to last person who joined
@@ -95,6 +115,16 @@ io.on("connection", socket => {
       console.log("JOINING " + msg.id)
       socket.room = msg.id
       socket.join(msg.id);
+      const isNewDocument = !roomDocuments.has(msg.id)
+      let roomDocument = roomDocuments.get(msg.id)
+      if (!roomDocument) {
+          roomDocument = { document: new Y.Doc() }
+          roomDocuments.set(msg.id, roomDocument)
+      }
+      socket.emit('document-state', {
+          update: Y.encodeStateAsUpdate(roomDocument.document),
+          initialize: isNewDocument
+      })
       console.log(io.sockets.adapter.rooms);
       console.log(io.sockets.adapter.rooms.get(msg.id));
     
