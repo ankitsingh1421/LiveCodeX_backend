@@ -8,7 +8,7 @@ const app = express();
 const httpServer = new http.Server(app);
 const axios = require("axios");
 
-const CLIENT_URL = "http://localhost:3000";
+const CLIENT_URL = "https://livecodex-seven.vercel.app";
 
 app.use(
     cors({
@@ -37,7 +37,7 @@ var removeRooms = []
 
 const io = require("socket.io")(httpServer, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "https://livecodex-seven.vercel.app",
     methods: ["GET", "POST"],
   },
 })
