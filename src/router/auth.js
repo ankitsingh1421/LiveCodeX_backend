@@ -12,7 +12,6 @@ const User = require('../models/userSchema');
 
 router.post('/register', async (req, res) => {
     console.log('Hello');
-    console.log(req.body);
     const { userName, email, password } = req.body;
 
     if (!userName || !email || !password) {
@@ -32,9 +31,12 @@ router.post('/register', async (req, res) => {
 
         if(userRegistered) {
             res.status(201).json({message:"User registered successfully"});
+        } else {
+            res.status(500).json({error:"Unable to register user"});
         }
     } catch (error) {
         console.log(error);
+        res.status(500).json({error:"Unable to register user"});
     } 
 });
 
@@ -54,9 +56,11 @@ router.post('/login', async (req, res) => {
             const token = await userExists.generateAuthToken();
             console.log(token);
 
-            res.cookie("jwtToken", token, { 
+            res.cookie("jwtToken", token, {
                 expires:new Date(Date.now(), 25892000000),
-                httpOnly:true
+                httpOnly:true,
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                secure: process.env.NODE_ENV === 'production'
             });
             
             if (!isMatch) {
