@@ -6,7 +6,6 @@ const jwt = require('jsonwebtoken');
 
 const authenticate = require('../middleware/authenticate');
 
-require('../db/connec');
 const User = require('../models/userSchema');
 
 

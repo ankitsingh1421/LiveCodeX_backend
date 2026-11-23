@@ -1,6 +1,5 @@
 const dotenv = require('dotenv');
 const cors =  require('cors');
-const mongoose = require('mongoose');
 const http = require('http');
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -24,7 +23,7 @@ dotenv.config({path:'./config.env'});
 
 app.use(express.json());
 
-require('./db/connec');
+const connectDatabase = require('./db/connec');
 
 app.use(require('./router/auth'));
 
@@ -202,7 +201,22 @@ app.post('/execute', async (req, res)=>{
 })
 
 console.log('Hello world from server IndexJS');
-removingRooms();
-httpServer.listen(PORT, () => {
+
+async function startServer() {
+  try {
+    await connectDatabase();
+  } catch (error) {
+    console.error(
+      'MongoDB connection failed. Check the DATABASE setting and MongoDB Atlas network access list:',
+      error.message
+    );
+    process.exit(1);
+  }
+
+  removingRooms();
+  httpServer.listen(PORT, () => {
     console.log(`port ${PORT}`);
-});
+  });
+}
+
+startServer();
